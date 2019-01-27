@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "BallPlayerController.generated.h"
 
+
 /**
  * 
  */
@@ -19,8 +20,10 @@ public:
 	virtual void SetupInputComponent() override;
 	
 public:
-	DECLARE_DELEGATE_OneParam(FOnSelectedPoint, TArray<FVector>);
+	DECLARE_DELEGATE_OneParam(FOnSelectedPoint, const TArray<FVector>&);
 	FOnSelectedPoint OnSelectedPoint;
+	DECLARE_DELEGATE(FOnFinishedWall)
+	FOnFinishedWall OnFinishedWall;
 
 public:
 	UFUNCTION()
@@ -29,14 +32,24 @@ public:
 	void CallbackInputTouchOver(ETouchIndex::Type TouchIndex, FVector Location);
 	UFUNCTION()
 	void CallbackInputTouchEnd(ETouchIndex::Type TouchIndex, FVector Location);
+	UFUNCTION()
+	void CallbackInputDoubleTouch(ETouchIndex::Type TouchIndex, FVector Location);
+
+	UFUNCTION()
+	void CallbackInputTouch2();
 
 private:
 	/*Allow just 1 touch for now*/
 	ETouchIndex::Type CurrentTouchType = ETouchIndex::MAX_TOUCHES;
-	FVector2D StartPos;
-	FVector2D CurrentPos;
-	FVector2D DirectionVector;
+
+	UPROPERTY(EditDefaultsOnly)
+	UBlueprintGeneratedClass* SplineWallClass;
 
 	UPROPERTY()
 	TArray<FVector> PointArray;
+
+	int32 PointNum;
+	
+	UPROPERTY()
+	TWeakObjectPtr<class AWallColumn> PositionEditingWallColumn;
 };

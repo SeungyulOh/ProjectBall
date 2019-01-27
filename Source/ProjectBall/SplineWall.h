@@ -25,30 +25,52 @@ public:
 
 public:
 	UFUNCTION()
-	void Refresh(TArray<FVector> InPoints);
+	void Refresh(const TArray<FVector>& InPoints);
+	UFUNCTION()
+	void Callback_FinishBuild();
+
+	void PositionEdit(int32 TargetIdx, FVector FinalPos);
+
+	void SetDisableExceptFor(class AWallColumn* Target);
+	void SetAllEnable(bool bEnable);
 
 
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ASplineWall")
 	class USplineComponent*		SplineComponent;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ASplineWall")
-	class UStaticMesh*			WallStaticMesh;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ASplineWall")
-	class UMaterialInterface*	WallMaterial;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ASplineWall")
-	class UStaticMesh*			ColStaticMesh;
+	class UStaticMesh*			WallStaticMesh;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ASplineWall")
-	class UMaterialInterface*	ColMaterial;
+	class UMaterialInstanceConstant*	WallMaterial;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ASplineWall")
+	class UMaterialInstanceConstant*	FinalWallMaterial;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ASplineWall")
+	class UMaterialInstanceDynamic*		WallMaterialDynamic;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ASplineWall")
+	class UBlueprintGeneratedClass* ColomnClass;
 
 
 private:
+	float RadiusOffSet = 15.f;
 	float TotalWallLength = 0.f;
 	/*Activated*/
 	bool bActivated = false;
 
+	float SpawnEffectDuration = 0.5f;
+	float SpawnEffectElapsedTime = 1.f;
+
 	UPROPERTY()
 	TArray<class USplineMeshComponent*> SplineMeshArray;
+	UPROPERTY()
+	TArray<class AWallColumn*> ColumnActorArray;
+	UPROPERTY()
+	TArray<FVector> CachedPointArray;
+
+private:
+	const FName APPEAR_PARAM = TEXT("control");
 
 public:
 	FORCEINLINE bool isActivated() const { return bActivated == true; }
