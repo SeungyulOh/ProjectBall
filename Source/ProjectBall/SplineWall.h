@@ -30,10 +30,9 @@ public:
 	void Callback_FinishBuild();
 
 	void PositionEdit(int32 TargetIdx, FVector FinalPos);
+	void PositionMerge(int32 TargetIdx);
 
-	void SetDisableExceptFor(class AWallColumn* Target);
-	void SetAllEnable(bool bEnable);
-
+	void SetAllDisablePositionEdit();
 
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ASplineWall")

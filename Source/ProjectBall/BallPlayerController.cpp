@@ -6,6 +6,7 @@
 #include "Engine/UserInterfaceSettings.h"
 #include "SplineWall.h"
 #include "WallColumn.h"
+#include "Engine/PostProcessVolume.h"
 
 ABallPlayerController::ABallPlayerController()
 {
@@ -19,10 +20,52 @@ void ABallPlayerController::SetupInputComponent()
 	InputComponent->BindTouch(IE_Pressed, this, &ABallPlayerController::CallbackInputTouchBegin);
 	InputComponent->BindTouch(IE_Repeat, this, &ABallPlayerController::CallbackInputTouchOver);
 	InputComponent->BindTouch(IE_Released, this, &ABallPlayerController::CallbackInputTouchEnd);
-	InputComponent->BindTouch(IE_DoubleClick, this, &ABallPlayerController::CallbackInputDoubleTouch);
 
 	InputComponent->BindAction(TEXT("Touch2"), EInputEvent::IE_Pressed, this, &ABallPlayerController::CallbackInputTouch2);
 
+}
+
+void ABallPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+
+	TArray<AActor*> OutActors;
+	UGameplayStatics::GetAllActorsOfClass(this, APostProcessVolume::StaticClass(), OutActors);
+
+
+	for (auto& Element : GetWorld()->PostProcessVolumes)
+	{
+		APostProcessVolume* PPVolume = Cast<APostProcessVolume>(Element);
+		if (PPVolume)
+		{
+			if (PPVolume->Settings.WeightedBlendables.Array.IsValidIndex(0))
+			{
+				UMaterialInterface* OutLineMat = Cast<UMaterialInterface>(PPVolume->Settings.WeightedBlendables.Array[0].Object);
+				if (OutLineMat)
+				{
+					MID = UMaterialInstanceDynamic::Create(OutLineMat, nullptr);
+					PPVolume->Settings.WeightedBlendables.Array[0].Object = MID;
+					break;
+				}
+			}
+		}
+	}
+}
+
+void ABallPlayerController::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (DepthEffectElapsedTime >= 0 && DepthEffectElapsedTime <= DepthEffectDuration)
+	{
+		DepthEffectElapsedTime += DeltaSeconds * (bEnable ? 1 : -1);
+
+		float Value = (DepthEffectDuration - DepthEffectElapsedTime) / DepthEffectDuration;
+		Value = FMath::Clamp<float>(Value, 0.25f, 1.f);
+
+		if (IsValid(MID))
+			MID->SetScalarParameterValue(TEXT("DarkIntensity"), Value);
+	}
 }
 
 void ABallPlayerController::CallbackInputTouchBegin(ETouchIndex::Type TouchIndex, FVector Location)
@@ -36,10 +79,6 @@ void ABallPlayerController::CallbackInputTouchBegin(ETouchIndex::Type TouchIndex
 	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Blue, str2);*/
 
 	CurrentTouchType = TouchIndex;
-
-	/*float viewScale = UWidgetLayoutLibrary::GetViewportScale(GetWorld());
-	const FVector2D viewportSize = FVector2D(GEngine->GameViewport->Viewport->GetSizeXY());
-	viewScale = GetDefault<UUserInterfaceSettings>(UUserInterfaceSettings::StaticClass())->GetDPIScaleBasedOnSize(FIntPoint(viewportSize.X, viewportSize.Y));*/
 
 	FVector WorldLocation;
 	FVector WorldDirection;
@@ -55,6 +94,7 @@ void ABallPlayerController::CallbackInputTouchBegin(ETouchIndex::Type TouchIndex
 				{
 					ASplineWall* Wall = GetWorld()->SpawnActor<ASplineWall>(SplineWallClass);
 					PointArray.AddUnique(outResult[i].ImpactPoint);
+					SplineWallArray.Emplace(Wall);
 				}
 
 				PointNum = PointArray.Num();
@@ -64,10 +104,9 @@ void ABallPlayerController::CallbackInputTouchBegin(ETouchIndex::Type TouchIndex
 			{
 				PositionEditingWallColumn = Cast<AWallColumn>(outResult[i].Actor);
 				PositionEditingWallColumn->SetActorEnableCollision(false);
-				if (PositionEditingWallColumn->ParentWall.IsValid())
-				{
-					PositionEditingWallColumn->ParentWall->SetDisableExceptFor(PositionEditingWallColumn.Get());
-				}
+
+				bEnable = true;
+				DepthEffectElapsedTime = 0.f;
 			}
 			else
 				GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Yellow, outResult[i].Actor->GetName());
@@ -95,8 +134,25 @@ void ABallPlayerController::CallbackInputTouchOver(ETouchIndex::Type TouchIndex,
 		{
 			if (PositionEditingWallColumn.IsValid())
 			{
+				PositionEditingWallColumn->bPositionMergable = false;
+				PositionEditingWallColumn->SetCustomDepthRender(false);
+
 				if (outResult[i].Actor->GetName().Contains(TEXT("Floor")))
 					PositionEditingWallColumn->EditPosition(outResult[i].ImpactPoint);
+				else if (outResult[i].Actor->GetName().Contains(TEXT("Col")))
+				{
+					AWallColumn* Target = Cast<AWallColumn>(outResult[i].Actor);
+					if (IsValid(Target))
+					{
+						int32 diff = Target->TargetIdx - PositionEditingWallColumn->TargetIdx;
+						if (FMath::Abs<int32>(diff) == 1 && PositionEditingWallColumn->ParentWall.Get() == Target->ParentWall)
+						{
+							PositionEditingWallColumn->SetCustomDepthRender(true);
+							PositionEditingWallColumn->EditPosition(outResult[i].Actor->GetActorLocation());
+							PositionEditingWallColumn->bPositionMergable = true;
+						}
+					}
+				}
 				else
 					GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Yellow, outResult[i].Actor->GetName());
 			}
@@ -125,12 +181,18 @@ void ABallPlayerController::CallbackInputTouchEnd(ETouchIndex::Type TouchIndex, 
 	if (PositionEditingWallColumn.IsValid())
 	{
 		PositionEditingWallColumn->SetActorEnableCollision(true);
-		if (PositionEditingWallColumn->ParentWall.IsValid())
+
+		if (PositionEditingWallColumn->bPositionMergable)
 		{
-			PositionEditingWallColumn->ParentWall->SetAllEnable(true);
+			PositionEditingWallColumn->MergePosition(PositionEditingWallColumn->GetActorLocation());
 		}
+			
 
 		PositionEditingWallColumn = nullptr;
+
+		bEnable = false;
+		if (DepthEffectElapsedTime > DepthEffectDuration)
+			DepthEffectElapsedTime = DepthEffectDuration;
 	}
 
 	PointArray.Empty();
@@ -140,12 +202,22 @@ void ABallPlayerController::CallbackInputTouchEnd(ETouchIndex::Type TouchIndex, 
 	
 }
 
-void ABallPlayerController::CallbackInputDoubleTouch(ETouchIndex::Type TouchIndex, FVector Location)
-{
-	
-}
 
 void ABallPlayerController::CallbackInputTouch2()
 {
 	CallbackInputTouchBegin(ETouchIndex::Touch2, FVector(300, 300, 1));
 }
+
+void ABallPlayerController::PlayStart()
+{
+	for (auto& Element : SplineWallArray)
+	{
+		if (Element.IsValid())
+		{
+			Element->SetAllDisablePositionEdit();
+		}
+	}
+
+	DisableInput(this);
+}
+

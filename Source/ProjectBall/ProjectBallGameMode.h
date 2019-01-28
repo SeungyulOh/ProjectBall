@@ -10,7 +10,6 @@ UENUM(BlueprintType)
 enum class EGameModeState : uint8
 {
 	IDLE,
-	BUILDING,
 	PLAY,
 	END
 };

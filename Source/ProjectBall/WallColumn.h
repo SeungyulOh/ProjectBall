@@ -28,10 +28,13 @@ public:
 
 	void SetbPositionEditable(bool bNewPositionEditable);
 	void EditPosition(FVector NewPos);
+	void MergePosition(FVector NewPos);
+
+	void SetCustomDepthRender(bool bRender);
 
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AWallColumn")
-	bool bPositionEditable = false;
+	bool bPositionMergable = false;
 
 	UPROPERTY()
 	TWeakObjectPtr<class ASplineWall> ParentWall;

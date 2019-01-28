@@ -18,6 +18,8 @@ class PROJECTBALL_API ABallPlayerController : public APlayerController
 public:
 	ABallPlayerController();
 	virtual void SetupInputComponent() override;
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 	
 public:
 	DECLARE_DELEGATE_OneParam(FOnSelectedPoint, const TArray<FVector>&);
@@ -32,11 +34,15 @@ public:
 	void CallbackInputTouchOver(ETouchIndex::Type TouchIndex, FVector Location);
 	UFUNCTION()
 	void CallbackInputTouchEnd(ETouchIndex::Type TouchIndex, FVector Location);
-	UFUNCTION()
-	void CallbackInputDoubleTouch(ETouchIndex::Type TouchIndex, FVector Location);
+	
 
 	UFUNCTION()
 	void CallbackInputTouch2();
+
+	UFUNCTION(BlueprintCallable)
+	void PlayStart();
+
+	
 
 private:
 	/*Allow just 1 touch for now*/
@@ -48,8 +54,20 @@ private:
 	UPROPERTY()
 	TArray<FVector> PointArray;
 
+	UPROPERTY()
+	UMaterialInstanceDynamic* MID;
+
 	int32 PointNum;
 	
 	UPROPERTY()
 	TWeakObjectPtr<class AWallColumn> PositionEditingWallColumn;
+
+	UPROPERTY()
+	TArray<TWeakObjectPtr<class ASplineWall>> SplineWallArray;
+
+
+	/*Rendering Effect*/
+	float DepthEffectDuration = 0.5f;
+	float DepthEffectElapsedTime = 0.5f;
+	bool bEnable = false;
 };

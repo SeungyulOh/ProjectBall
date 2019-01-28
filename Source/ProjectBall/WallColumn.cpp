@@ -27,8 +27,7 @@ void AWallColumn::Tick(float DeltaTime)
 
 void AWallColumn::SetbPositionEditable(bool bNewPositionEditable)
 {
-	bPositionEditable = bNewPositionEditable;
-	PositionEditable(bPositionEditable);
+	PositionEditable(bNewPositionEditable);
 }
 
 void AWallColumn::EditPosition(FVector NewPos)
@@ -37,5 +36,20 @@ void AWallColumn::EditPosition(FVector NewPos)
 
 	if (ParentWall.IsValid())
 		ParentWall->PositionEdit(TargetIdx, NewPos);
+}
+
+void AWallColumn::MergePosition(FVector NewPos)
+{
+	if (ParentWall.IsValid())
+		ParentWall->PositionMerge(TargetIdx);
+}
+
+void AWallColumn::SetCustomDepthRender(bool bRender)
+{
+	UStaticMeshComponent* StaticMeshComp = FindComponentByClass<UStaticMeshComponent>();
+	if (StaticMeshComp)
+	{
+		StaticMeshComp->SetRenderCustomDepth(bRender);
+	}
 }
 

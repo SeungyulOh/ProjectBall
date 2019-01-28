@@ -151,7 +151,7 @@ void ASplineWall::Refresh(const TArray<FVector>& InPoints)
 				meshComponent->SetForwardAxis(ESplineMeshAxis::Z);
 
 				meshComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
-				meshComponent->SetRenderCustomDepth(true);
+				//meshComponent->SetRenderCustomDepth(true);
 
 
 				TotalWallLength += VectorLength;
@@ -219,37 +219,44 @@ void ASplineWall::PositionEdit(int32 TargetIdx, FVector FinalPos)
 
 		//DrawDebugLine(GetWorld(), StartPos, EndPos, FColor::Red, false, 1.f, 0, 3.f);
 
-		FVector Direction = EndPos - StartPos;
-		float VectorLength = Direction.Size() - 2 * RadiusOffSet;
-		Direction = Direction.GetSafeNormal();
-
-		FRotator LookatRot = UKismetMathLibrary::FindLookAtRotation(StartPos, EndPos);
-		//LookatRot.Yaw = 0.f;
-
-		FTransform NewTransform;
-		NewTransform.SetLocation(StartPos + Direction * RadiusOffSet + FVector(0.f, 100.f, 0.f));
-		NewTransform.SetScale3D(FVector(VectorLength*0.01f, 2.f, 0.2f));
-		NewTransform.SetRotation(LookatRot.Quaternion());
-
-		if (SplineMeshArray.IsValidIndex(TargetIdx - 1))
+		if (StartPos != EndPos)
 		{
-			SplineMeshArray[TargetIdx - 1]->DestroyComponent();
+			FVector Direction = EndPos - StartPos;
+			float VectorLength = Direction.Size() - 2 * RadiusOffSet;
+			Direction = Direction.GetSafeNormal();
 
-			USplineMeshComponent* meshComponent = NewObject<USplineMeshComponent>(this);
-			if (meshComponent)
+			FRotator LookatRot = UKismetMathLibrary::FindLookAtRotation(StartPos, EndPos);
+			//LookatRot.Yaw = 0.f;
+
+			FTransform NewTransform;
+			NewTransform.SetLocation(StartPos + Direction * RadiusOffSet + FVector(0.f, 100.f, 0.f));
+			NewTransform.SetScale3D(FVector(VectorLength*0.01f, 2.f, 0.2f));
+			NewTransform.SetRotation(LookatRot.Quaternion());
+
+			if (SplineMeshArray.IsValidIndex(TargetIdx - 1))
 			{
-				meshComponent->OnComponentCreated();
+				SplineMeshArray[TargetIdx - 1]->DestroyComponent();
 
-				meshComponent->SetStaticMesh(WallStaticMesh);
-				meshComponent->SetMaterial(0, WallMaterialDynamic);
-				meshComponent->SetWorldTransform(NewTransform);
+				USplineMeshComponent* meshComponent = NewObject<USplineMeshComponent>(this);
+				if (meshComponent)
+				{
+					meshComponent->OnComponentCreated();
 
-				meshComponent->SetForwardAxis(ESplineMeshAxis::Z);
-				meshComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+					meshComponent->SetStaticMesh(WallStaticMesh);
+					meshComponent->SetMaterial(0, WallMaterialDynamic);
+					meshComponent->SetWorldTransform(NewTransform);
 
-				meshComponent->RegisterComponent();
-				SplineMeshArray[TargetIdx - 1] = meshComponent;
+					meshComponent->SetForwardAxis(ESplineMeshAxis::Z);
+					meshComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+
+					meshComponent->RegisterComponent();
+					SplineMeshArray[TargetIdx - 1] = meshComponent;
+				}
 			}
+		}
+		else
+		{
+			SplineMeshArray[TargetIdx - 1]->SetVisibility(false);
 		}
 	}
 
@@ -260,55 +267,141 @@ void ASplineWall::PositionEdit(int32 TargetIdx, FVector FinalPos)
 
 		//DrawDebugLine(GetWorld(), StartPos, EndPos, FColor::Blue, false, 1.f, 0, 3.f);
 
-		FVector Direction = EndPos - StartPos;
-		float VectorLength = Direction.Size() - 2 * RadiusOffSet;
-		Direction = Direction.GetSafeNormal();
-
-		FRotator LookatRot = UKismetMathLibrary::FindLookAtRotation(StartPos, EndPos);
-		//LookatRot.Yaw = 0.f;
-		FTransform NewTransform;
-		NewTransform.SetLocation(StartPos + Direction * RadiusOffSet + FVector(0.f, 100.f, 0.f));
-		NewTransform.SetScale3D(FVector(VectorLength*0.01f, 2.f, 0.2f));
-		NewTransform.SetRotation(LookatRot.Quaternion());
-
-		if (SplineMeshArray.IsValidIndex(TargetIdx))
+		if (StartPos != EndPos)
 		{
-			SplineMeshArray[TargetIdx]->DestroyComponent();
+			FVector Direction = EndPos - StartPos;
+			float VectorLength = Direction.Size() - 2 * RadiusOffSet;
+			Direction = Direction.GetSafeNormal();
 
-			USplineMeshComponent* meshComponent = NewObject<USplineMeshComponent>(this);
-			if (meshComponent)
+			FRotator LookatRot = UKismetMathLibrary::FindLookAtRotation(StartPos, EndPos);
+			//LookatRot.Yaw = 0.f;
+			FTransform NewTransform;
+			NewTransform.SetLocation(StartPos + Direction * RadiusOffSet + FVector(0.f, 100.f, 0.f));
+			NewTransform.SetScale3D(FVector(VectorLength*0.01f, 2.f, 0.2f));
+			NewTransform.SetRotation(LookatRot.Quaternion());
+
+			if (SplineMeshArray.IsValidIndex(TargetIdx))
 			{
-				meshComponent->OnComponentCreated();
+				SplineMeshArray[TargetIdx]->DestroyComponent();
 
-				meshComponent->SetStaticMesh(WallStaticMesh);
-				meshComponent->SetMaterial(0, WallMaterialDynamic);
-				meshComponent->SetWorldTransform(NewTransform);
+				USplineMeshComponent* meshComponent = NewObject<USplineMeshComponent>(this);
+				if (meshComponent)
+				{
+					meshComponent->OnComponentCreated();
 
-				meshComponent->SetForwardAxis(ESplineMeshAxis::Z);
-				meshComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+					meshComponent->SetStaticMesh(WallStaticMesh);
+					meshComponent->SetMaterial(0, WallMaterialDynamic);
+					meshComponent->SetWorldTransform(NewTransform);
 
-				meshComponent->RegisterComponent();
-				SplineMeshArray[TargetIdx] = meshComponent;
+					meshComponent->SetForwardAxis(ESplineMeshAxis::Z);
+					meshComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+
+					meshComponent->RegisterComponent();
+					SplineMeshArray[TargetIdx] = meshComponent;
+				}
+			}
+		}
+		else
+		{
+			SplineMeshArray[TargetIdx]->SetVisibility(false);
+		}
+	}
+}
+
+void ASplineWall::PositionMerge(int32 TargetIdx)
+{
+	CachedPointArray.RemoveAt(TargetIdx);
+	if (ColumnActorArray.IsValidIndex(TargetIdx))
+	{
+		ColumnActorArray[TargetIdx]->Destroy();
+		ColumnActorArray.RemoveAt(TargetIdx);
+	}
+
+	for (auto& Element : SplineMeshArray)
+		Element->DestroyComponent();
+
+	SplineMeshArray.Empty();
+	
+	for (auto& Element : ColumnActorArray)
+		Element->Destroy();
+
+	ColumnActorArray.Empty();
+
+
+	if (CachedPointArray.Num() <= 1)
+	{
+		Destroy();
+		return;
+	}
+
+	SplineComponent->SetSplinePoints(CachedPointArray, ESplineCoordinateSpace::World);
+
+	int32 TotalPoints = SplineComponent->GetNumberOfSplinePoints();
+	int32 MeshCount = TotalPoints - 1;
+
+	for (size_t i = 0; i < MeshCount; ++i)
+	{
+		USplineMeshComponent* meshComponent = NewObject<USplineMeshComponent>(this);
+		if (meshComponent)
+		{
+			meshComponent->OnComponentCreated();
+
+			meshComponent->SetStaticMesh(WallStaticMesh);
+			meshComponent->SetMaterial(0, WallMaterialDynamic);
+
+			FVector StartPos = SplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::World);
+			FVector EndPos = SplineComponent->GetLocationAtSplinePoint(i + 1, ESplineCoordinateSpace::World);
+
+			FVector Direction = EndPos - StartPos;
+			float VectorLength = Direction.Size() - 2 * RadiusOffSet;
+			Direction = Direction.GetSafeNormal();
+
+			FRotator LookatRot = UKismetMathLibrary::FindLookAtRotation(StartPos, EndPos);
+			//LookatRot.Yaw = 0.f;
+
+			FTransform NewTransform;
+			NewTransform.SetLocation(StartPos + Direction * RadiusOffSet + FVector(0.f, 100.f, 0.f));
+			NewTransform.SetScale3D(FVector(VectorLength*0.01f, 2.f, 0.2f));
+			NewTransform.SetRotation(LookatRot.Quaternion());
+			meshComponent->SetWorldTransform(NewTransform);
+			meshComponent->SetForwardAxis(ESplineMeshAxis::Z);
+
+			meshComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+			meshComponent->RegisterComponent();
+
+			SplineMeshArray.Emplace(meshComponent);
+
+			AWallColumn* Column = nullptr;
+			Column = GetWorld()->SpawnActor<AWallColumn>(ColomnClass, StartPos, FRotator::ZeroRotator);
+			if (IsValid(Column))
+			{
+				Column->TargetIdx = ColumnActorArray.Num();
+				Column->ParentWall = this;
+				ColumnActorArray.AddUnique(Column);
+			}
+
+			if (i == MeshCount - 1)
+			{
+				Column = GetWorld()->SpawnActor<AWallColumn>(ColomnClass, EndPos, FRotator::ZeroRotator);
+				if (IsValid(Column))
+				{
+					Column->TargetIdx = ColumnActorArray.Num();
+					Column->ParentWall = this;
+					ColumnActorArray.AddUnique(Column);
+				}
 			}
 		}
 	}
 }
 
-void ASplineWall::SetDisableExceptFor(class AWallColumn* Target)
+void ASplineWall::SetAllDisablePositionEdit()
 {
-	for (AWallColumn* Element : ColumnActorArray)
+	for (auto& Element : ColumnActorArray)
 	{
-		if (Element == Target)
-			continue;
-
-		Element->SetbPositionEditable(false);
+		if (IsValid(Element))
+		{
+			Element->SetbPositionEditable(false);
+		}
 	}
 }
 
-void ASplineWall::SetAllEnable(bool bEnable)
-{
-	for (AWallColumn* Element : ColumnActorArray)
-	{
-		Element->SetbPositionEditable(bEnable);
-	}
-}
