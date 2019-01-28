@@ -78,7 +78,8 @@ void ABallPlayerController::CallbackInputTouchBegin(ETouchIndex::Type TouchIndex
 	/*FString str2 = TEXT("CallbackInputTouchOver idx : ") + FString::FromInt((int)TouchIndex) + TEXT(" Location : ") + FString::FromInt(Location.X) + TEXT(" ,") + FString::FromInt(Location.Y) + TEXT(" ,") + FString::FromInt(Location.Z);
 	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Blue, str2);*/
 
-	CurrentTouchType = TouchIndex;
+	if(TouchIndex != ETouchIndex::MAX_TOUCHES)
+		CurrentTouchType = ETouchIndex::Touch1;
 
 	FVector WorldLocation;
 	FVector WorldDirection;
@@ -112,6 +113,8 @@ void ABallPlayerController::CallbackInputTouchBegin(ETouchIndex::Type TouchIndex
 				GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Yellow, outResult[i].Actor->GetName());
 		}
 	}
+
+	
 	
 }
 

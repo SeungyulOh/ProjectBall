@@ -66,6 +66,8 @@ void ASplineWall::Refresh(const TArray<FVector>& InPoints)
 	//Update only for last point
 	if (InPoints.Num() == CachedPointArray.Num())
 	{
+		//GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Cyan, TEXT("same"));
+
 		int32 TargetIdx = SplineComponent->GetNumberOfSplinePoints() - 1;
 
 		SplineComponent->RemoveSplinePoint(TargetIdx);
@@ -116,6 +118,8 @@ void ASplineWall::Refresh(const TArray<FVector>& InPoints)
 		
 		if (IsValid(SplineComponent))
 		{
+			//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Cyan, TEXT("diff"));
+
 			TotalWallLength = 0.f;
 
 			int32 LastIdx = InPoints.Num() - 1;
