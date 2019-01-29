@@ -409,3 +409,21 @@ void ASplineWall::SetAllDisablePositionEdit()
 	}
 }
 
+void ASplineWall::DestroyAll()
+{
+	ABallPlayerController* BallPC = Cast<ABallPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
+	if (IsValid(BallPC))
+	{
+		BallPC->OnSelectedPoint.Unbind();
+		BallPC->OnFinishedWall.Unbind();
+	}
+
+	for (auto& Element : SplineMeshArray)
+		Element->DestroyComponent();
+
+	for (auto& Element : ColumnActorArray)
+		Element->Destroy();
+
+	Destroy();
+}
+

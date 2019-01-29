@@ -7,6 +7,9 @@
 #include "SplineWall.h"
 #include "WallColumn.h"
 #include "Engine/PostProcessVolume.h"
+#include "ProjectBallGameMode.h"
+#include "Kismet/GameplayStatics.h"
+#include "TutorialPoint.h"
 
 ABallPlayerController::ABallPlayerController()
 {
@@ -81,6 +84,11 @@ void ABallPlayerController::CallbackInputTouchBegin(ETouchIndex::Type TouchIndex
 	if(TouchIndex != ETouchIndex::MAX_TOUCHES)
 		CurrentTouchType = ETouchIndex::Touch1;
 
+	//tutorial
+	AProjectBallGameMode* BallGameMode = Cast<AProjectBallGameMode>(UGameplayStatics::GetGameMode(this));
+	if (!IsValid(BallGameMode))
+		return;
+
 	FVector WorldLocation;
 	FVector WorldDirection;
 	if (DeprojectScreenPositionToWorld(Location.X, Location.Y, WorldLocation, WorldDirection))
@@ -89,7 +97,25 @@ void ABallPlayerController::CallbackInputTouchBegin(ETouchIndex::Type TouchIndex
 		GetWorld()->LineTraceMultiByChannel(outResult, WorldLocation, WorldLocation + WorldDirection * 99999.f, ECollisionChannel::ECC_WorldStatic);
 		for (size_t i = 0; i < outResult.Num(); ++i)
 		{
-			if (outResult[i].Actor->GetName().Contains(TEXT("Floor")))
+			if (BallGameMode->GetCurrentMode() == EGameModeState::TUTORIAL)
+			{
+				if (outResult[i].Actor->GetName().Contains(TEXT("Tuto")))
+				{
+					if (PointArray.Num() == 0)
+					{
+						ATutorialPoint* TutoPoint = Cast<ATutorialPoint>(outResult[i].Actor);
+						if (TutoPoint)
+							TutoPoint->ChangeMaterialColor(false);
+
+						ASplineWall* Wall = GetWorld()->SpawnActor<ASplineWall>(SplineWallClass);
+						PointArray.AddUnique(outResult[i].Actor->GetActorLocation());
+						SplineWallArray.Emplace(Wall);
+					}
+
+					PointNum = PointArray.Num();
+				}
+			}
+			else if (outResult[i].Actor->GetName().Contains(TEXT("Floor")))
 			{
 				if (PointArray.Num() == 0)
 				{
@@ -127,6 +153,12 @@ void ABallPlayerController::CallbackInputTouchOver(ETouchIndex::Type TouchIndex,
 	/*FString str = TEXT("CallbackInputTouchOver idx : ") + FString::FromInt((int)TouchIndex) + TEXT(" CurrentTouchType : ") + FString::FromInt((int)CurrentTouchType);
 	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::White, str);*/
 
+	//tutorial
+	AProjectBallGameMode* BallGameMode = Cast<AProjectBallGameMode>(UGameplayStatics::GetGameMode(this));
+	if (!IsValid(BallGameMode))
+		return;
+
+
 	FVector WorldLocation;
 	FVector WorldDirection;
 	if (DeprojectScreenPositionToWorld(Location.X, Location.Y, WorldLocation, WorldDirection))
@@ -135,7 +167,41 @@ void ABallPlayerController::CallbackInputTouchOver(ETouchIndex::Type TouchIndex,
 		GetWorld()->LineTraceMultiByChannel(outResult, WorldLocation, WorldLocation + WorldDirection * 99999.f, ECollisionChannel::ECC_WorldStatic);
 		for (size_t i = 0; i < outResult.Num(); ++i)
 		{
-			if (PositionEditingWallColumn.IsValid())
+			if (BallGameMode->GetCurrentMode() == EGameModeState::TUTORIAL)
+			{
+				if (outResult[i].Actor->GetName().Contains(TEXT("Tuto")))
+				{
+					if (PointArray.Num() >= PointNum + 1)
+						PointArray.Pop();
+
+					ATutorialPoint* TutoPoint = Cast<ATutorialPoint>(outResult[i].Actor);
+					if (TutoPoint)
+					{
+						LastTouchedTutoPoint = TutoPoint;
+						TutoPoint->ChangeMaterialColor(false);
+					}
+						
+
+					PointArray.AddUnique(outResult[i].Actor->GetActorLocation());
+					OnSelectedPoint.ExecuteIfBound(PointArray);
+				}
+				else if (outResult[i].Actor->GetName().Contains(TEXT("Floor")))
+				{
+					if (LastTouchedTutoPoint.IsValid())
+					{
+						LastTouchedTutoPoint->ChangeMaterialColor(true);
+						LastTouchedTutoPoint = nullptr;
+					}
+
+					if (PointArray.Num() >= PointNum + 1)
+						PointArray.Pop();
+
+					PointArray.AddUnique(outResult[i].ImpactPoint);
+					OnSelectedPoint.ExecuteIfBound(PointArray);
+					break;
+				}
+			}
+			else if (PositionEditingWallColumn.IsValid())
 			{
 				PositionEditingWallColumn->bPositionMergable = false;
 				PositionEditingWallColumn->SetCustomDepthRender(false);
@@ -180,6 +246,25 @@ void ABallPlayerController::CallbackInputTouchEnd(ETouchIndex::Type TouchIndex, 
 
 	/*FString str = TEXT("CallbackInputTouchEnd idx : ") + FString::FromInt((int)TouchIndex) + TEXT(" Location : ") + FString::FromInt(Location.X) + TEXT(" ,") + FString::FromInt(Location.Y) + TEXT(" ,") + FString::FromInt(Location.Z);
 	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, str);*/
+	//tutorial
+	AProjectBallGameMode* BallGameMode = Cast<AProjectBallGameMode>(UGameplayStatics::GetGameMode(this));
+	if (!IsValid(BallGameMode))
+		return;
+
+	if (BallGameMode->GetCurrentMode() == EGameModeState::TUTORIAL)
+	{
+		if (LastTouchedTutoPoint.IsValid())
+		{
+			LastTouchedTutoPoint->ChangeMaterialColor(true);
+			BallGameMode->SetCurrentTutorialMode(ETutorialMode::TUTO2);
+		}
+		else
+		{
+			TWeakObjectPtr<ASplineWall> TargetWall = SplineWallArray.Pop();
+			if (TargetWall.IsValid())
+				TargetWall->DestroyAll();
+		}
+	}
 	
 	if (PositionEditingWallColumn.IsValid())
 	{

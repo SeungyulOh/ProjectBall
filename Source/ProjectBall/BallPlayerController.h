@@ -63,6 +63,9 @@ private:
 	TWeakObjectPtr<class AWallColumn> PositionEditingWallColumn;
 
 	UPROPERTY()
+	TWeakObjectPtr<class ATutorialPoint> LastTouchedTutoPoint;
+
+	UPROPERTY()
 	TArray<TWeakObjectPtr<class ASplineWall>> SplineWallArray;
 
 

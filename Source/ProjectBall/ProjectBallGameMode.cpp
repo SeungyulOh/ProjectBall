@@ -22,3 +22,17 @@ void AProjectBallGameMode::SetCurrentMode(EGameModeState NewState)
 	CurrentMode = NewState;
 	OnStateChanged.Broadcast(CurrentMode);
 }
+
+ETutorialMode AProjectBallGameMode::GetTutorialMode()
+{
+	return TutoMode;
+}
+
+void AProjectBallGameMode::SetCurrentTutorialMode(ETutorialMode NewMode)
+{
+	if (TutoMode == NewMode)
+		return;
+
+	TutoMode = NewMode;
+	OnTutoModeChanged.Broadcast(TutoMode);
+}

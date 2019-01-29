@@ -34,6 +34,8 @@ public:
 
 	void SetAllDisablePositionEdit();
 
+	void DestroyAll();
+
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ASplineWall")
 	class USplineComponent*		SplineComponent;
