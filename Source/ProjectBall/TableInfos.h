@@ -17,5 +17,7 @@ struct FTutorialPointTableInfo : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FTutorialPointTableInfo")
 	TArray<FVector> Location;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FTutorialPointTableInfo")
+	bool		bDeleteWall;
 
 };

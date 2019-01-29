@@ -43,6 +43,7 @@ public:
 	void PlayStart();
 
 	
+	void DestroyAllSplineWall();
 
 private:
 	/*Allow just 1 touch for now*/

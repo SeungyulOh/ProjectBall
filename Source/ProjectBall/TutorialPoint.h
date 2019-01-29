@@ -26,4 +26,10 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	void ChangeMaterialColor(bool bOriginalColor);
 
+	FORCEINLINE bool isActivatedAtLeastOnce() {		return bActivatedAtLeastOne;	}
+	FORCEINLINE void SetisActivatedAtLeastOnce(bool InBool) { bActivatedAtLeastOne = InBool; }
+
+private:
+	bool bActivatedAtLeastOne = false;
+
 };

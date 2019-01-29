@@ -76,5 +76,6 @@ private:
 public:
 	FORCEINLINE bool isActivated() const { return bActivated == true; }
 	FORCEINLINE float GetTotalLength() const { return TotalWallLength; }
+	FORCEINLINE const TArray<FVector>& GetCachedPointArray() const { return CachedPointArray; }
 
 };

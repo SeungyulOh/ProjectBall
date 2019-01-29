@@ -105,38 +105,56 @@ void ABallPlayerController::CallbackInputTouchBegin(ETouchIndex::Type TouchIndex
 					{
 						ATutorialPoint* TutoPoint = Cast<ATutorialPoint>(outResult[i].Actor);
 						if (TutoPoint)
+						{
+							TutoPoint->SetisActivatedAtLeastOnce(true);
 							TutoPoint->ChangeMaterialColor(false);
+						}
+							
+						if (BallGameMode->GetTutorialMode() <= ETutorialMode::TUTO2)
+						{
+							ASplineWall* Wall = GetWorld()->SpawnActor<ASplineWall>(SplineWallClass);
+							PointArray.AddUnique(outResult[i].Actor->GetActorLocation());
+							SplineWallArray.Emplace(Wall);
+						}
+					}
+				}
+				else if (outResult[i].Actor->GetName().Contains(TEXT("Column")))
+				{
+					PositionEditingWallColumn = Cast<AWallColumn>(outResult[i].Actor);
+					PositionEditingWallColumn->SetActorEnableCollision(false);
 
+					bEnable = true;
+					DepthEffectElapsedTime = 0.f;
+				}
+				PointNum = PointArray.Num();
+				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, TEXT("1"));
+			}
+			else
+			{
+				if (outResult[i].Actor->GetName().Contains(TEXT("Floor")))
+				{
+					if (PointArray.Num() == 0)
+					{
 						ASplineWall* Wall = GetWorld()->SpawnActor<ASplineWall>(SplineWallClass);
-						PointArray.AddUnique(outResult[i].Actor->GetActorLocation());
+						PointArray.AddUnique(outResult[i].ImpactPoint);
 						SplineWallArray.Emplace(Wall);
 					}
 
 					PointNum = PointArray.Num();
+					break;
 				}
-			}
-			else if (outResult[i].Actor->GetName().Contains(TEXT("Floor")))
-			{
-				if (PointArray.Num() == 0)
+				else if (outResult[i].Actor->GetName().Contains(TEXT("Column")))
 				{
-					ASplineWall* Wall = GetWorld()->SpawnActor<ASplineWall>(SplineWallClass);
-					PointArray.AddUnique(outResult[i].ImpactPoint);
-					SplineWallArray.Emplace(Wall);
+					PositionEditingWallColumn = Cast<AWallColumn>(outResult[i].Actor);
+					PositionEditingWallColumn->SetActorEnableCollision(false);
+
+					bEnable = true;
+					DepthEffectElapsedTime = 0.f;
 				}
-
-				PointNum = PointArray.Num();
-				break;
+				else
+					GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Yellow, outResult[i].Actor->GetName());
 			}
-			else if (outResult[i].Actor->GetName().Contains(TEXT("Column")))
-			{
-				PositionEditingWallColumn = Cast<AWallColumn>(outResult[i].Actor);
-				PositionEditingWallColumn->SetActorEnableCollision(false);
-
-				bEnable = true;
-				DepthEffectElapsedTime = 0.f;
-			}
-			else
-				GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Yellow, outResult[i].Actor->GetName());
+			
 		}
 	}
 
@@ -169,18 +187,62 @@ void ABallPlayerController::CallbackInputTouchOver(ETouchIndex::Type TouchIndex,
 		{
 			if (BallGameMode->GetCurrentMode() == EGameModeState::TUTORIAL)
 			{
-				if (outResult[i].Actor->GetName().Contains(TEXT("Tuto")))
+				if (PositionEditingWallColumn.IsValid())
 				{
-					if (PointArray.Num() >= PointNum + 1)
-						PointArray.Pop();
+					PositionEditingWallColumn->bPositionMergable = false;
+					PositionEditingWallColumn->SetCustomDepthRender(false);
 
+					if (outResult[i].Actor->GetName().Contains(TEXT("Floor")))
+					{
+						if (LastTouchedTutoPoint.IsValid())
+						{
+							LastTouchedTutoPoint->ChangeMaterialColor(true);
+							LastTouchedTutoPoint = nullptr;
+						}
+
+						PositionEditingWallColumn->EditPosition(outResult[i].ImpactPoint);
+					}
+					else if (outResult[i].Actor->GetName().Contains(TEXT("Tuto")))
+					{
+						ATutorialPoint* TutoPoint = Cast<ATutorialPoint>(outResult[i].Actor);
+						if (TutoPoint)
+						{
+							LastTouchedTutoPoint = TutoPoint;
+							LastTouchedTutoPoint->ChangeMaterialColor(false);
+							LastTouchedTutoPoint->SetisActivatedAtLeastOnce(true);
+						}
+
+						PositionEditingWallColumn->EditPosition(outResult[i].Actor->GetActorLocation());
+					}
+					else if (outResult[i].Actor->GetName().Contains(TEXT("Col")))
+					{
+						AWallColumn* Target = Cast<AWallColumn>(outResult[i].Actor);
+						if (IsValid(Target))
+						{
+							int32 diff = Target->TargetIdx - PositionEditingWallColumn->TargetIdx;
+							if (FMath::Abs<int32>(diff) == 1 && PositionEditingWallColumn->ParentWall.Get() == Target->ParentWall)
+							{
+								PositionEditingWallColumn->SetCustomDepthRender(true);
+								PositionEditingWallColumn->EditPosition(outResult[i].Actor->GetActorLocation());
+								PositionEditingWallColumn->bPositionMergable = true;
+							}
+						}
+					}
+					else
+						GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Yellow, outResult[i].Actor->GetName());
+				}
+				else if (outResult[i].Actor->GetName().Contains(TEXT("Tuto")))
+				{
 					ATutorialPoint* TutoPoint = Cast<ATutorialPoint>(outResult[i].Actor);
 					if (TutoPoint)
 					{
 						LastTouchedTutoPoint = TutoPoint;
-						TutoPoint->ChangeMaterialColor(false);
+						LastTouchedTutoPoint->ChangeMaterialColor(false);
+						LastTouchedTutoPoint->SetisActivatedAtLeastOnce(true);
 					}
-						
+
+					if (PointArray.Num() >= PointNum + 1)
+						PointArray.Pop();
 
 					PointArray.AddUnique(outResult[i].Actor->GetActorLocation());
 					OnSelectedPoint.ExecuteIfBound(PointArray);
@@ -198,41 +260,43 @@ void ABallPlayerController::CallbackInputTouchOver(ETouchIndex::Type TouchIndex,
 
 					PointArray.AddUnique(outResult[i].ImpactPoint);
 					OnSelectedPoint.ExecuteIfBound(PointArray);
-					break;
 				}
 			}
-			else if (PositionEditingWallColumn.IsValid())
+			else
 			{
-				PositionEditingWallColumn->bPositionMergable = false;
-				PositionEditingWallColumn->SetCustomDepthRender(false);
-
-				if (outResult[i].Actor->GetName().Contains(TEXT("Floor")))
-					PositionEditingWallColumn->EditPosition(outResult[i].ImpactPoint);
-				else if (outResult[i].Actor->GetName().Contains(TEXT("Col")))
+				if (PositionEditingWallColumn.IsValid())
 				{
-					AWallColumn* Target = Cast<AWallColumn>(outResult[i].Actor);
-					if (IsValid(Target))
+					PositionEditingWallColumn->bPositionMergable = false;
+					PositionEditingWallColumn->SetCustomDepthRender(false);
+
+					if (outResult[i].Actor->GetName().Contains(TEXT("Floor")))
+						PositionEditingWallColumn->EditPosition(outResult[i].ImpactPoint);
+					else if (outResult[i].Actor->GetName().Contains(TEXT("Col")))
 					{
-						int32 diff = Target->TargetIdx - PositionEditingWallColumn->TargetIdx;
-						if (FMath::Abs<int32>(diff) == 1 && PositionEditingWallColumn->ParentWall.Get() == Target->ParentWall)
+						AWallColumn* Target = Cast<AWallColumn>(outResult[i].Actor);
+						if (IsValid(Target))
 						{
-							PositionEditingWallColumn->SetCustomDepthRender(true);
-							PositionEditingWallColumn->EditPosition(outResult[i].Actor->GetActorLocation());
-							PositionEditingWallColumn->bPositionMergable = true;
+							int32 diff = Target->TargetIdx - PositionEditingWallColumn->TargetIdx;
+							if (FMath::Abs<int32>(diff) == 1 && PositionEditingWallColumn->ParentWall.Get() == Target->ParentWall)
+							{
+								PositionEditingWallColumn->SetCustomDepthRender(true);
+								PositionEditingWallColumn->EditPosition(outResult[i].Actor->GetActorLocation());
+								PositionEditingWallColumn->bPositionMergable = true;
+							}
 						}
 					}
+					else
+						GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Yellow, outResult[i].Actor->GetName());
 				}
-				else
-					GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Yellow, outResult[i].Actor->GetName());
-			}
-			else if (outResult[i].Actor->GetName().Contains(TEXT("Floor")))
-			{
-				if (PointArray.Num() >= PointNum + 1)
-					PointArray.Pop();
+				else if (outResult[i].Actor->GetName().Contains(TEXT("Floor")))
+				{
+					if (PointArray.Num() >= PointNum + 1)
+						PointArray.Pop();
 
-				PointArray.AddUnique(outResult[i].ImpactPoint);
-				OnSelectedPoint.ExecuteIfBound(PointArray);
-				break;
+					PointArray.AddUnique(outResult[i].ImpactPoint);
+					OnSelectedPoint.ExecuteIfBound(PointArray);
+					break;
+				}
 			}
 		}
 	}
@@ -254,17 +318,69 @@ void ABallPlayerController::CallbackInputTouchEnd(ETouchIndex::Type TouchIndex, 
 	if (BallGameMode->GetCurrentMode() == EGameModeState::TUTORIAL)
 	{
 		if (LastTouchedTutoPoint.IsValid())
-		{
 			LastTouchedTutoPoint->ChangeMaterialColor(true);
-			BallGameMode->SetCurrentTutorialMode(ETutorialMode::TUTO2);
-		}
-		else
+
+		if (SplineWallArray.IsValidIndex(0))
 		{
-			TWeakObjectPtr<ASplineWall> TargetWall = SplineWallArray.Pop();
-			if (TargetWall.IsValid())
-				TargetWall->DestroyAll();
+			TArray<FVector> points = SplineWallArray[0]->GetCachedPointArray();
+
+			ETutorialMode mode = BallGameMode->GetTutorialMode();
+			if (mode <= ETutorialMode::TUTO2)
+			{
+				if (BallGameMode->isAllActivatedTutoPoint(points))
+				{
+					int32 Idx = (int32)mode;
+					Idx++;
+					BallGameMode->SetCurrentTutorialMode((ETutorialMode)Idx);
+				}
+				else
+				{
+					if (SplineWallArray.Num())
+					{
+						TWeakObjectPtr<ASplineWall> TargetWall = SplineWallArray.Pop();
+						if (TargetWall.IsValid())
+							TargetWall->DestroyAll();
+					}
+				}
+			}
+			else if (mode == ETutorialMode::TUTO3)
+			{
+				if (BallGameMode->isAllActivatedTutoPoint(points))
+				{
+					int32 Idx = (int32)mode;
+					Idx++;
+					BallGameMode->SetCurrentTutorialMode((ETutorialMode)Idx);
+				}
+				else
+				{
+					if (PositionEditingWallColumn.IsValid())
+					{
+						PositionEditingWallColumn->SetActorEnableCollision(true);
+						PositionEditingWallColumn = nullptr;
+
+						bEnable = false;
+						if (DepthEffectElapsedTime > DepthEffectDuration)
+							DepthEffectElapsedTime = DepthEffectDuration;
+					}
+				}
+			}
+			else if (mode == ETutorialMode::TUTO4)
+			{
+				if (PositionEditingWallColumn.IsValid() && PositionEditingWallColumn->bPositionMergable && 
+					PositionEditingWallColumn->ParentWall->GetCachedPointArray().Num() == 2)
+				{
+					int32 Idx = (int32)mode;
+					Idx++;
+					BallGameMode->SetCurrentTutorialMode((ETutorialMode)Idx);
+
+					bEnable = false;
+					if (DepthEffectElapsedTime > DepthEffectDuration)
+						DepthEffectElapsedTime = DepthEffectDuration;
+				}
+			}
 		}
 	}
+
 	
 	if (PositionEditingWallColumn.IsValid())
 	{
@@ -307,5 +423,16 @@ void ABallPlayerController::PlayStart()
 	}
 
 	DisableInput(this);
+}
+
+void ABallPlayerController::DestroyAllSplineWall()
+{
+	for (auto& Element : SplineWallArray)
+	{
+		if (Element.IsValid())
+			Element->DestroyAll();
+	}
+
+	SplineWallArray.Empty();
 }
 

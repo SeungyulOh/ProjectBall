@@ -34,6 +34,8 @@ class AProjectBallGameMode : public AGameModeBase
 public:
 	AProjectBallGameMode();
 
+	virtual void BeginPlay() override;
+
 public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void StageFail();
@@ -58,13 +60,22 @@ public:
 	ETutorialMode GetTutorialMode();
 	UFUNCTION(BlueprintCallable)
 	void SetCurrentTutorialMode(ETutorialMode NewMode);
+
+	bool isAllActivatedTutoPoint(TArray<FVector> SelectedPoints);
 	
 
 private:
 	UPROPERTY()
-	EGameModeState CurrentMode = EGameModeState::TUTORIAL;
+	EGameModeState CurrentMode = EGameModeState::END;
 	UPROPERTY()
-	ETutorialMode TutoMode = ETutorialMode::TUTO1;
+	ETutorialMode TutoMode = ETutorialMode::TUTOEND;
+
+	UPROPERTY(EditDefaultsOnly)
+	class UDataTable*		TutorialPointTable = nullptr;
+	UPROPERTY(EditDefaultsOnly)
+	class UBlueprintGeneratedClass*		TutorialPointClass = nullptr;
+	UPROPERTY()
+	TArray<class ATutorialPoint*> TutoPointArray;
 };
 
 
