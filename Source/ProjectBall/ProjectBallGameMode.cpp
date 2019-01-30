@@ -5,8 +5,10 @@
 #include "ProjectBallBall.h"
 #include "TableInfos.h"
 #include "TutorialPoint.h"
+#include "ProjectBall.h"
 #include "BallPlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "BallGameInstance.h"
 
 AProjectBallGameMode::AProjectBallGameMode()
 {
@@ -18,8 +20,18 @@ void AProjectBallGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SetCurrentMode(EGameModeState::TUTORIAL);
-	SetCurrentTutorialMode(ETutorialMode::TUTO1);
+	if (!BALLGAMEINSTANCE(this)->bTutorialCompleted)
+	{
+		SetCurrentMode(EGameModeState::TUTORIAL);
+		SetCurrentTutorialMode(ETutorialMode::TUTO1);
+	}
+	else
+	{
+		SetCurrentMode(EGameModeState::IDLE);
+		SetCurrentTutorialMode(ETutorialMode::TUTOEND);
+	}
+
+	
 }
 
 EGameModeState AProjectBallGameMode::GetCurrentMode()
@@ -95,9 +107,18 @@ void AProjectBallGameMode::SetCurrentTutorialMode(ETutorialMode NewMode)
 		{
 			PC->DestroyAllSplineWall();
 		}
+
+		BALLGAMEINSTANCE(this)->bTutorialCompleted = true;
+
 		SetCurrentMode(EGameModeState::IDLE);
 	}
 		
+}
+
+void AProjectBallGameMode::SkipTutorial()
+{
+	SetCurrentMode(EGameModeState::IDLE);
+	SetCurrentTutorialMode(ETutorialMode::TUTOEND);
 }
 
 bool AProjectBallGameMode::isAllActivatedTutoPoint(TArray<FVector> SelectedPoints)

@@ -61,6 +61,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetCurrentTutorialMode(ETutorialMode NewMode);
 
+	UFUNCTION(BlueprintCallable)
+	void SkipTutorial();
+
 	bool isAllActivatedTutoPoint(TArray<FVector> SelectedPoints);
 	
 
