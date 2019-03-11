@@ -2,6 +2,9 @@
 
 #include "BallGameInstance.h"
 #include "ProjectBall.h"
+#include "StageHelper.h"
+#include "BallPlayerController.h"
+#include "SplineWall.h"
 
 PROJECTBALL_API UBallGameInstance* BallGameInstance = nullptr;
 
@@ -23,4 +26,48 @@ class UBallGameInstance* UBallGameInstance::Get(class UObject* OutterOwner)
 #else
 	return BallGameInstance;
 #endif
+}
+
+void UBallGameInstance::Init()
+{
+	Super::Init();
+
+	BallGameInstance = this;
+
+	WallMemoryHelper = NewObject<UWallMemoryHelper>();
+}
+
+void UBallGameInstance::Shutdown()
+{
+	Super::Shutdown();
+
+	UStageHelper::Get()->Release();
+	WallMemoryHelper = nullptr;
+}
+
+void UWallMemoryHelper::Clear()
+{
+	WallInfos.Empty();
+}
+
+bool UWallMemoryHelper::isWallMemoryExist()
+{
+	return WallInfos.Num();
+}
+
+void UWallMemoryHelper::SavePointVectors(TArray<FPointVectors> InWallInfo)
+{
+	WallInfos = InWallInfo;
+}
+
+void UWallMemoryHelper::MakeWall(class ABallPlayerController* BallPC)
+{
+	for (FPointVectors& Element : WallInfos)
+	{
+		ASplineWall* Wall = BallPC->SpawnSplineWall();
+		if (IsValid(Wall))
+		{
+			Wall->MakeWall(Element.Points);
+		}
+	}
 }

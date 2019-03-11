@@ -15,6 +15,8 @@ class PROJECTBALL_API ABallPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
+	friend class UWallMemoryHelper;
+
 public:
 	ABallPlayerController();
 	virtual void SetupInputComponent() override;
@@ -26,6 +28,9 @@ public:
 	FOnSelectedPoint OnSelectedPoint;
 	DECLARE_DELEGATE(FOnFinishedWall)
 	FOnFinishedWall OnFinishedWall;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Point")
+	bool isThumbOnGoalPoint = false;
 
 public:
 	UFUNCTION()
@@ -42,8 +47,15 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void PlayStart();
 
+	UFUNCTION(BlueprintCallable)
+	void SaveWallPoints();
+
 	
 	void DestroyAllSplineWall();
+	void RemoveElementInVector(class ASplineWall* InWall);
+
+private:
+	class ASplineWall* SpawnSplineWall();
 
 private:
 	/*Allow just 1 touch for now*/
@@ -67,7 +79,10 @@ private:
 	TWeakObjectPtr<class ATutorialPoint> LastTouchedTutoPoint;
 
 	UPROPERTY()
-	TArray<TWeakObjectPtr<class ASplineWall>> SplineWallArray;
+	TArray<class ASplineWall*> SplineWallArray;
+
+	UPROPERTY()
+	TArray<class ASplineWall*> MergeWaitingList;
 
 
 	/*Rendering Effect*/

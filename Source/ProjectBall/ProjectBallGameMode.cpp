@@ -9,6 +9,7 @@
 #include "BallPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "BallGameInstance.h"
+#include "StageHelper.h"
 
 AProjectBallGameMode::AProjectBallGameMode()
 {
@@ -20,16 +21,15 @@ void AProjectBallGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!BALLGAMEINSTANCE(this)->bTutorialCompleted)
-	{
-		SetCurrentMode(EGameModeState::TUTORIAL);
-		SetCurrentTutorialMode(ETutorialMode::TUTO1);
-	}
-	else
-	{
-		SetCurrentMode(EGameModeState::IDLE);
-		SetCurrentTutorialMode(ETutorialMode::TUTOEND);
-	}
+	static int32 uuid = 0;
+	FLatentActionInfo info;
+	info.Linkage = 0;
+	info.UUID = ++uuid;
+	info.CallbackTarget = this;
+	info.ExecutionFunction = TEXT("Callback_SublevelLoaded");
+	int32 CurrentStage = UStageHelper::Get()->GetCurrentStage();
+	FString MapName = TEXT("Level") + FString::FromInt(CurrentStage);
+	UGameplayStatics::LoadStreamLevel(this, FName(*MapName), true, true, info);
 
 	
 }
@@ -79,6 +79,13 @@ void AProjectBallGameMode::SetCurrentTutorialMode(ETutorialMode NewMode)
 			if (NewMode == ETutorialMode::TUTO3)
 			{
 				if (idx == 0 || idx == 2)
+				{
+					point->SetisActivatedAtLeastOnce(true);
+				}
+			}
+			else if (NewMode == ETutorialMode::TUTO4)
+			{
+				if (idx != 3)
 				{
 					point->SetisActivatedAtLeastOnce(true);
 				}
@@ -135,4 +142,37 @@ bool AProjectBallGameMode::isAllActivatedTutoPoint(TArray<FVector> SelectedPoint
 	}
 
 	return bResult;
+}
+
+void AProjectBallGameMode::AddCurrentStage()
+{
+	UStageHelper::Get()->AddCurrentStage();
+	
+	BALLGAMEINSTANCE(this)->WallMemoryHelper->Clear();
+}
+
+
+int32 AProjectBallGameMode::GetCurrentStage()
+{
+	return UStageHelper::Get()->GetCurrentStage();
+}
+
+void AProjectBallGameMode::Callback_SublevelLoaded()
+{
+	if (!BALLGAMEINSTANCE(this)->bTutorialCompleted)
+	{
+		SetCurrentMode(EGameModeState::TUTORIAL);
+		SetCurrentTutorialMode(ETutorialMode::TUTO1);
+	}
+	else
+	{
+		SetCurrentMode(EGameModeState::IDLE);
+		SetCurrentTutorialMode(ETutorialMode::TUTOEND);
+	}
+}
+
+void AProjectBallGameMode::SetStage(int32 NewStageidx)
+{
+	UStageHelper::Get()->SetCurrentStage(NewStageidx);
+	UGameplayStatics::OpenLevel(this, TEXT("StageMap"));
 }

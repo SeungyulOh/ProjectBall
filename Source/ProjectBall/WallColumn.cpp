@@ -53,3 +53,41 @@ void AWallColumn::SetCustomDepthRender(bool bRender)
 	}
 }
 
+void AWallColumn::GetNearColumn(TArray<AWallColumn*>& OutResult)
+{
+	if (ParentWall.IsValid())
+	{
+		TArray<AWallColumn*> Columns = ParentWall->GetColumnActorArray();
+		int32 CurrentIdx = Columns.Find(this);
+		if (CurrentIdx != INDEX_NONE)
+		{
+			if (Columns.IsValidIndex(CurrentIdx - 1))
+			{
+				OutResult.Emplace(Columns[CurrentIdx - 1]);
+			}
+			if (Columns.IsValidIndex(CurrentIdx + 1))
+			{
+				OutResult.Emplace(Columns[CurrentIdx + 1]);
+			}
+		}
+	}
+	
+}
+
+bool AWallColumn::isTailColumn()
+{
+	bool isTail = ParentWall->isTailColumn(this);
+	return isTail;
+}
+
+bool AWallColumn::isEdgeColumn()
+{
+	return isHeadColumn() || isTailColumn();
+}
+
+bool AWallColumn::isHeadColumn()
+{
+	bool isHead = ParentWall->isHeadColumn(this);
+	return isHead;
+}
+

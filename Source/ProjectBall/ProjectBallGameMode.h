@@ -22,6 +22,7 @@ enum class ETutorialMode : uint8
 	TUTO2,
 	TUTO3,
 	TUTO4,
+	TUTO5,
 	TUTOEND
 };
 
@@ -65,8 +66,22 @@ public:
 	void SkipTutorial();
 
 	bool isAllActivatedTutoPoint(TArray<FVector> SelectedPoints);
+
+	UFUNCTION(BlueprintCallable)
+	void AddCurrentStage();
+	UFUNCTION(BlueprintCallable)
+	int32 GetCurrentStage();
 	
 
+	UFUNCTION()
+	void Callback_SublevelLoaded();
+
+
+	/*Console Command*/
+	UFUNCTION(Exec, Category = ExecFunctions)
+	void SetStage(int32 NewStageidx);
+	
+	
 private:
 	UPROPERTY()
 	EGameModeState CurrentMode = EGameModeState::END;
@@ -79,6 +94,7 @@ private:
 	class UBlueprintGeneratedClass*		TutorialPointClass = nullptr;
 	UPROPERTY()
 	TArray<class ATutorialPoint*> TutoPointArray;
+
 };
 
 

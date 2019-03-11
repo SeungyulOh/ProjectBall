@@ -102,6 +102,9 @@ void ASplineWall::Refresh(const TArray<FVector>& InPoints)
 				meshComponent->SetStaticMesh(WallStaticMesh);
 				meshComponent->SetMaterial(0, WallMaterial);
 				meshComponent->SetWorldTransform(NewTransform);
+				/*meshComponent->SetCastShadow(true);
+				meshComponent->bCastDynamicShadow = true;
+				meshComponent->SetMobility(EComponentMobility::Movable);*/
 
 				meshComponent->SetForwardAxis(ESplineMeshAxis::Z);
 				meshComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
@@ -191,13 +194,7 @@ void ASplineWall::Callback_FinishBuild()
 
 	int32 MaxIdx = CachedPointArray.Num() - 1;
 
-	AWallColumn* Column = GetWorld()->SpawnActor<AWallColumn>(ColomnClass, CachedPointArray[MaxIdx], FRotator::ZeroRotator);
-	if (IsValid(Column))
-	{
-		Column->TargetIdx = ColumnActorArray.Num();
-		Column->ParentWall = this;
-		ColumnActorArray.AddUnique(Column);
-
+	auto SpawnInitialize = [this]() {
 		for (USplineMeshComponent* Element : SplineMeshArray)
 		{
 			Element->SetMaterial(0, WallMaterialDynamic);
@@ -206,6 +203,41 @@ void ASplineWall::Callback_FinishBuild()
 
 		for (AWallColumn* Element : ColumnActorArray)
 			Element->SetbPositionEditable(true);
+	};
+
+	//if last idx point vector is too close to prev points , delete it
+	FVector VectorLength = CachedPointArray[MaxIdx] - CachedPointArray[MaxIdx - 1];
+	float Length = VectorLength.Size();
+	if (FMath::IsNearlyZero(Length, 5.f))
+	{
+		CachedPointArray.Pop();
+		MaxIdx = CachedPointArray.Num() - 1;
+		if (CachedPointArray.Num() < 2)
+		{
+			DestroyAll();
+		}
+		else
+		{
+			USplineMeshComponent* Mesh = SplineMeshArray.Pop();
+			if (IsValid(Mesh))
+			{
+				Mesh->DestroyComponent();
+			}
+
+			SpawnInitialize();
+		}
+		return;
+	}
+	
+
+	AWallColumn* Column = GetWorld()->SpawnActor<AWallColumn>(ColomnClass, CachedPointArray[MaxIdx], FRotator::ZeroRotator);
+	if (IsValid(Column))
+	{
+		Column->TargetIdx = ColumnActorArray.Num();
+		Column->ParentWall = this;
+		ColumnActorArray.AddUnique(Column);
+
+		SpawnInitialize();
 	}
 }
 
@@ -398,14 +430,26 @@ void ASplineWall::PositionMerge(int32 TargetIdx)
 	}
 }
 
-void ASplineWall::SetAllDisablePositionEdit()
+void ASplineWall::SetAllEnablePositionEdit(bool bEnable)
 {
 	for (auto& Element : ColumnActorArray)
 	{
 		if (IsValid(Element))
 		{
-			Element->SetbPositionEditable(false);
+			Element->SetbPositionEditable(bEnable);
 		}
+	}
+}
+
+void ASplineWall::SetEnableEdgeMerge(bool bEnable)
+{
+	if (ColumnActorArray.IsValidIndex(0))
+	{
+		ColumnActorArray[0]->SetbPositionEditable(bEnable);
+	}
+	if (ColumnActorArray.IsValidIndex(ColumnActorArray.Num() - 1))
+	{
+		ColumnActorArray[ColumnActorArray.Num() - 1]->SetbPositionEditable(bEnable);
 	}
 }
 
@@ -416,6 +460,7 @@ void ASplineWall::DestroyAll()
 	{
 		BallPC->OnSelectedPoint.Unbind();
 		BallPC->OnFinishedWall.Unbind();
+		BallPC->RemoveElementInVector(this);
 	}
 
 	for (auto& Element : SplineMeshArray)
@@ -425,5 +470,89 @@ void ASplineWall::DestroyAll()
 		Element->Destroy();
 
 	Destroy();
+}
+
+bool ASplineWall::isTailColumn(class AWallColumn* InColumn)
+{
+	int32 FoundIdx = ColumnActorArray.Find(InColumn);
+	if (FoundIdx != INDEX_NONE)
+	{
+		if (FoundIdx == ColumnActorArray.Num() - 1)
+			return true;
+	}
+
+	return false;
+}
+
+bool ASplineWall::isHeadColumn(class AWallColumn* InColumn)
+{
+	int32 FoundIdx = ColumnActorArray.Find(InColumn);
+	if (FoundIdx != INDEX_NONE)
+	{
+		if (FoundIdx == 0)
+			return true;
+	}
+
+	return false;
+}
+
+void ASplineWall::MakeWall(const TArray<FVector>& InPoints)
+{
+	if (IsValid(SplineComponent))
+	{
+		int32 LastIdx = InPoints.Num() - 1;
+		SplineComponent->SetSplinePoints(InPoints, ESplineCoordinateSpace::World);
+
+		int32 TotalPoints = SplineComponent->GetNumberOfSplinePoints();
+		int32 MeshCount = TotalPoints - 1;
+		for (int32 i = 0; i <= MeshCount; ++i)
+		{
+			if (i == MeshCount)
+			{
+				CachedPointArray = InPoints;
+				Callback_FinishBuild();
+				break;
+			}
+
+			USplineMeshComponent* meshComponent = NewObject<USplineMeshComponent>(this);
+			if (meshComponent)
+			{
+				meshComponent->OnComponentCreated();
+
+				meshComponent->SetStaticMesh(WallStaticMesh);
+				meshComponent->SetMaterial(0, WallMaterial);
+
+				FVector StartPos = SplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::World);
+				FVector EndPos = SplineComponent->GetLocationAtSplinePoint(i+1, ESplineCoordinateSpace::World);
+
+				FVector Direction = EndPos - StartPos;
+				float VectorLength = Direction.Size() - 2 * RadiusOffSet;
+				Direction = Direction.GetSafeNormal();
+
+				FRotator LookatRot = UKismetMathLibrary::FindLookAtRotation(StartPos, EndPos);
+				//LookatRot.Yaw = 0.f;
+
+				FTransform NewTransform;
+				NewTransform.SetLocation(StartPos + Direction * RadiusOffSet + FVector(0.f, 100.f, 0.f));
+				NewTransform.SetScale3D(FVector(VectorLength*0.01f, 2.f, 0.2f));
+				NewTransform.SetRotation(LookatRot.Quaternion());
+				meshComponent->SetWorldTransform(NewTransform);
+
+				meshComponent->SetForwardAxis(ESplineMeshAxis::Z);
+				meshComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+				meshComponent->RegisterComponent();
+
+				SplineMeshArray.Emplace(meshComponent);
+
+				AWallColumn* Column = GetWorld()->SpawnActor<AWallColumn>(ColomnClass, StartPos, FRotator::ZeroRotator);
+				if (IsValid(Column))
+				{
+					Column->TargetIdx = ColumnActorArray.Num();
+					Column->ParentWall = this;
+					ColumnActorArray.AddUnique(Column);
+				}
+			}
+		}
+	}
 }
 

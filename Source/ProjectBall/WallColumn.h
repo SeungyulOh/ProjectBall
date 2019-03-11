@@ -25,12 +25,19 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void PositionEditable(bool bNewPositionEditable);
+	UFUNCTION(BlueprintImplementableEvent)
+	bool isColumnSelectable();
 
 	void SetbPositionEditable(bool bNewPositionEditable);
 	void EditPosition(FVector NewPos);
 	void MergePosition(FVector NewPos);
 
 	void SetCustomDepthRender(bool bRender);
+
+	void GetNearColumn(TArray<AWallColumn*>& OutResult);
+	bool isHeadColumn();
+	bool isTailColumn();
+	bool isEdgeColumn();
 
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AWallColumn")

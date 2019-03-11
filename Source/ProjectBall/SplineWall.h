@@ -10,6 +10,9 @@ UCLASS()
 class PROJECTBALL_API ASplineWall : public AActor
 {
 	GENERATED_BODY()
+
+	friend class UWallMemoryHelper;
+	friend class ABallPlayerController;
 	
 public:	
 	// Sets default values for this actor's properties
@@ -32,9 +35,15 @@ public:
 	void PositionEdit(int32 TargetIdx, FVector FinalPos);
 	void PositionMerge(int32 TargetIdx);
 
-	void SetAllDisablePositionEdit();
+	void SetAllEnablePositionEdit(bool bEnable);
+	void SetEnableEdgeMerge(bool bEnable);
 
 	void DestroyAll();
+	bool isHeadColumn(class AWallColumn* InColumn);
+	bool isTailColumn(class AWallColumn* InColumn);
+
+private:
+	void MakeWall(const TArray<FVector>& InPoints);
 
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ASplineWall")
@@ -77,5 +86,6 @@ public:
 	FORCEINLINE bool isActivated() const { return bActivated == true; }
 	FORCEINLINE float GetTotalLength() const { return TotalWallLength; }
 	FORCEINLINE const TArray<FVector>& GetCachedPointArray() const { return CachedPointArray; }
+	FORCEINLINE const TArray<class AWallColumn*>& GetColumnActorArray() const { return ColumnActorArray; }
 
 };
